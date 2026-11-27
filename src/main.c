@@ -8,7 +8,7 @@ void usage(const char *prog) {
           "Usage: %s [OPTIONS]\n"
           "\n"
           "Options:\n"
-          "  -m, --module PATH   KernelSU module path (default: /data/local/tmp/kernelsu.ko)\n"
+          "  -m, --module PATH   Release + load target (default: /data/local/tmp/kernelsu.ko)\n"
           "  -h, --help          Show this help\n"
           "\n"
           "Special:\n"
@@ -35,10 +35,22 @@ int main(int argc, char **argv) {
         usage(argv[0]);
         return 2;
       }
+      if (strlen(argv[i + 1]) >= sizeof(g_module_path)) {
+        pr_warning("module path too long (max %zu): %s\n",
+                   sizeof(g_module_path) - 1, argv[i + 1]);
+        usage(argv[0]);
+        return 2;
+      }
       snprintf(g_module_path, sizeof(g_module_path), "%s", argv[++i]);
     } else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--shell") == 0) {
       g_shell_mode = 1;
       if (i + 1 < argc && argv[i + 1][0] != '\0' && argv[i + 1][0] != '-') {
+        if (strlen(argv[i + 1]) >= sizeof(g_shell_path)) {
+          pr_warning("shell path too long (max %zu): %s\n",
+                     sizeof(g_shell_path) - 1, argv[i + 1]);
+          usage(argv[0]);
+          return 2;
+        }
         snprintf(g_shell_path, sizeof(g_shell_path), "%s", argv[++i]);
       }
     } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--force") == 0) {

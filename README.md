@@ -18,11 +18,11 @@ GhostLock54 for OPPO Reno7 5G
 与本 exploit 配套的文件统一放在 /data/local/tmp/ 根目录，不要再放子目录：
 
 · /data/local/tmp/ghostlock54 —— 编译产物
-· /data/local/tmp/kernelsu.ko —— KernelSU 模块，**内嵌在 ghostlock54 里，运行时会自动释放（覆盖）**（可用 -m/--module 指定其它路径）
-· /data/local/tmp/kernelsu.sh —— **由 ghostlock54 每次启动时释放（覆盖）**的加载脚本
+· /data/local/tmp/kernelsu.ko —— KernelSU 模块，**内嵌在 ghostlock54 里，运行时释放（已存在则跳过，-f 覆盖）**；`-m/--module` 可指定释放+加载路径
+· /data/local/tmp/kernelsu.sh —— **由 ghostlock54 释放（已存在则跳过，-f 覆盖）**的加载脚本
 
 KernelSU 加载逻辑放在 ghostlock54 **每次启动时释放**的 `/data/local/tmp/kernelsu.sh` 里：
-默认模式提权成功后直接执行该脚本（解析 kallsyms_lookup_name + insmod），完成后提示手动
+默认模式提权成功后直接执行该脚本（解析 kallsyms_lookup_name，优先用 Manager 的 libksud.so 加载、失败回退 insmod），完成后提示手动
 打开 KernelSU Manager；`-s` 模式下可在 root shell 里手动执行同一个脚本。
 
 两种使用模式：
@@ -39,7 +39,7 @@ sh /data/local/tmp/kernelsu.sh            # 默认加载 /data/local/tmp/kernels
 sh /data/local/tmp/kernelsu.sh /path/to/kernelsu.ko
 ```
 
-脚本每次启动 ghostlock54 时都会重新写入 /data/local/tmp/kernelsu.sh（存在则覆盖）。
+脚本每次启动 ghostlock54 时都会写入 /data/local/tmp/kernelsu.sh（存在则跳过，-f 覆盖）。
 
 防内核崩溃提示
 
@@ -87,7 +87,7 @@ nm -u ghostlock54 | grep -i selinux    # 应无输出（已不再链接 libselin
 
 运行
 
-ghostlock54 是**单文件**：kernelsu.ko 已内嵌，运行时自动释放到 /data/local/tmp/kernelsu.ko（存在则覆盖）。
+ghostlock54 是**单文件**：kernelsu.ko 已内嵌，运行时释放到 /data/local/tmp/kernelsu.ko（存在则跳过，-f 覆盖；-m 可改释放+加载路径）。
 
 ```sh
 adb push ghostlock54 /data/local/tmp/ghostlock54
@@ -237,7 +237,7 @@ KernelSU 集成
 流程：
 
 1. 运行 ghostlock54（可加 -m/--module 指定其它 ko 路径；-s/--shell 只开 root shell 不加载 KSU；-h/--help 查看帮助）
-2. exploit 提权成功后执行 /data/local/tmp/kernelsu.sh（解析 kallsyms_lookup_name、insmod），完成后提示手动打开 KernelSU Manager
+2. exploit 提权成功后执行 /data/local/tmp/kernelsu.sh（解析 kallsyms_lookup_name，libksud.so 加载、失败回退 insmod），完成后提示手动打开 KernelSU Manager
 3. 在 Manager 里给需要的 app 授权；之后任意已授权 app 的终端里 su 即可得到 u:r:ksu:s0 的 root shell
 
 模块是 runtime 加载（late-load），不修改 boot.img / 任何分区；重启后重新跑一次 ghostlock54 即可。

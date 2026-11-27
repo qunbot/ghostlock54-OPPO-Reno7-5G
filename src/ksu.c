@@ -15,7 +15,7 @@ extern const unsigned char _binary_kernelsu_ko_start[];
 extern const unsigned char _binary_kernelsu_ko_end[];
 
 void ksu_release_module(void) {
-  const char *path = "/data/local/tmp/kernelsu.ko";
+  const char *path = g_module_path;
   size_t len = (size_t)(_binary_kernelsu_ko_end - _binary_kernelsu_ko_start);
   if (!len) { pr_warning("[KSU] embedded module is empty\n"); return; }
 
@@ -77,10 +77,17 @@ const char ksu_script[] =
   "fi\n"
   "\n"
   "echo \"[*] kln=0x$KLN\"\n"
-  "/system/bin/insmod \"$KO\" kln=0x$KLN level=3\n"
+  "\n"
+  "# 直接用 KernelSU Manager 自带的 libksud.so 加载（glob 自动解析安装哈希路径）\n"
+  "/data/app/*/me.weishu.kernelsu-*/lib/arm64/libksud.so \"$KO\" kln=0x$KLN level=3\n"
   "RC=$?\n"
-  "if [ \"$RC\" -ne 0 ]; then\n"
-  "  echo \"[-] insmod failed (rc=$RC)\" >&2\n"
+  "if [ ! -d /sys/module/kernelsu ]; then\n"
+  "  echo \"[*] libksud did not load (rc=$RC), falling back to insmod\"\n"
+  "  /system/bin/insmod \"$KO\" kln=0x$KLN level=3\n"
+  "  RC=$?\n"
+  "fi\n"
+  "if [ ! -d /sys/module/kernelsu ]; then\n"
+  "  echo \"[-] module load failed (rc=$RC)\" >&2\n"
   "  exit 1\n"
   "fi\n"
   "exit 0\n"
