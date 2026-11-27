@@ -47,7 +47,19 @@ sh /data/local/tmp/kernelsu.sh /path/to/kernelsu.ko
 
 编译
 
-一条命令搞定（make 会先编模块，再把它链接进 ghostlock54）。不建 build/ 目录，产物就在模块源码旁边：
+一条命令搞定（make 会先编模块，再编译 src/ 并链接成 ghostlock54）。源码结构：
+
+```
+src/common.h     # 公共声明（宏/常量/全局 extern/函数原型）
+src/globals.c    # 全局状态定义
+src/util.c       # 日志、计时、等待辅助
+src/leak.c       # KASLR / task / cred / selinux_state 泄漏
+src/futex.c      # futex PI 原语、X/Y 线程、write_value
+src/ksu.c        # 内嵌 kernelsu.ko / kernelsu.sh 的释放
+src/main.c       # 参数解析与 exploit 流程
+```
+
+产物就在模块源码旁边：
 
 ```
 kernelsu/src/kernel/kernelsu.ko           # make 编出来的模块（带调试段）
@@ -61,7 +73,7 @@ ghostlock54                               # 最终单文件
 ```sh
 make            # 默认 STRIP=1：内嵌前去掉 ko 的调试段（ko 约 325KB，二进制约 360KB）
 make STRIP=0    # 保留完整 ko（约 5.7MB，二进制约 5.8MB）
-make module     # 只编模块 -> build/kernelsu.ko
+make module     # 只编模块 -> kernelsu/src/kernel/kernelsu.ko
 make clean
 ```
 
@@ -244,7 +256,7 @@ kernelsu/ 目录下的源代码派生自 [KernelSU](https://github.com/tiann/Ker
 · 单文件发布：kernelsu.ko 内嵌进 ghostlock54，运行时释放到 /data/local/tmp/kernelsu.ko；发行版只提供 ghostlock54 一个文件。
 · 删除 write_value(child_task + 0x8d0, 0)：adb shell 场景下子进程 seccomp.mode 本来就是 0，该写为空操作。写入次数由 5 次降到 4 次，减少一次 PI 竞态失败点，成功率由约 80% 提升。若在 App 进程内跑（父进程带 seccomp filter），需要把这步加回。
 · log_context 保留：攻击前后打印进程上下文（纯文件 IO，读 /proc/self/attr/current）。
-· 编译命令：llvm-objcopy 把 kernelsu.ko 转成对象后与 ghostlock54.c 一起链接（见上方「编译」）。
+· 编译命令：make（src/*.c 编译成 .o，与内嵌 kernelsu.ko 的 blob 对象一起链接；见上方「编译」）。
 
 许可证
 
