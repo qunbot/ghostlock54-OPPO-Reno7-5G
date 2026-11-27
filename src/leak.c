@@ -1,5 +1,8 @@
 #include "common.h"
 
+/* leak.c - KASLR / task_struct / cred / selinux_state 泄漏 */
+
+
 uint64_t ring_u64(const uint8_t *ring, uint64_t size, uint64_t pos) {
   uint64_t v, off = pos & (size - 1);
   if (off + 8 <= size) memcpy(&v, ring + off, 8);

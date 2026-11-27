@@ -1,3 +1,4 @@
+/* common.h - 公共声明：宏、内核偏移、全局 extern、函数原型 */
 #ifndef GHOSTLOCK54_COMMON_H
 #define GHOSTLOCK54_COMMON_H
 

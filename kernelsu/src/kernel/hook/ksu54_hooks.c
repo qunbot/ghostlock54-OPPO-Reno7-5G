@@ -1,10 +1,11 @@
 /* 5.4 direct syscall-table hooking.
  *
- * The tracepoint + ni-slot dispatcher design in KSU Next targets 5.10+; on this
- * 5.4 vendor kernel the safest approach is the classic one: patch the table
- * entry of each hooked syscall with a wrapper and keep the original handler to
- * call through. The wrappers take the syscall handler prototype directly, so no
- * orig-number trampoline (x8) or tracepoint redirection is needed. */
+ * The tracepoint + ni-slot dispatcher design used by newer KernelSU targets
+ * 5.10+; on this 5.4 vendor kernel the safest approach is the classic one:
+ * patch the table entry of each hooked syscall with a wrapper and keep the
+ * original handler to call through. The wrappers take the syscall handler
+ * prototype directly, so no orig-number trampoline (x8) or tracepoint
+ * redirection is needed. */
 #include <linux/ptrace.h>
 #include <linux/printk.h>
 #include <linux/slab.h>

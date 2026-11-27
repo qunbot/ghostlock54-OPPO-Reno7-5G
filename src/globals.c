@@ -1,5 +1,8 @@
 #include "common.h"
 
+/* globals.c - 全局状态定义（内核地址、原子变量、模式开关） */
+
+
 struct timespec t_start;
 uint64_t runtime_text;
 uint64_t k_init_task;

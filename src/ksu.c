@@ -1,5 +1,9 @@
 #include "common.h"
 
+/* ksu.c - 内嵌 kernelsu.ko / kernelsu.sh 的释放（-f 覆盖） */
+
+
+/* 取路径的 basename 作为 argv[0]（bash/toybox 等多调用程序依赖它） */
 const char *path_basename(const char *p) {
   const char *s = strrchr(p, '/');
   return s ? s + 1 : p;
@@ -48,7 +52,7 @@ void ksu_release_module(void) {
 /* ---------- 释放 kernelsu.sh ---------- */
 const char ksu_script[] =
   "#!/system/bin/sh\n"
-  "# kernelsu.sh - released by ghostlock54 (kept if it already exists)\n"
+  "# kernelsu.sh - released by ghostlock54 (kept unless -f)\n"
   "# Loads KernelSU module. Run inside a root shell (e.g. ghostlock54 -s).\n"
   "KO=\"${1:-/data/local/tmp/kernelsu.ko}\"\n"
   "\n"
@@ -62,9 +66,11 @@ const char ksu_script[] =
   "  exit 0\n"
   "fi\n"
   "\n"
+  "KPTR=$(cat /proc/sys/kernel/kptr_restrict 2>/dev/null)\n"
   "echo 1 > /proc/sys/kernel/kptr_restrict 2>/dev/null\n"
   "\n"
   "KLN=$(grep ' T kallsyms_lookup_name$' /proc/kallsyms 2>/dev/null | head -n 1 | cut -d' ' -f1)\n"
+  "if [ -n \"$KPTR\" ]; then echo \"$KPTR\" > /proc/sys/kernel/kptr_restrict 2>/dev/null; fi\n"
   "if [ -z \"$KLN\" ]; then\n"
   "  echo \"[-] kallsyms_lookup_name not found (need root)\" >&2\n"
   "  exit 1\n"

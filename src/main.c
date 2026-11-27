@@ -1,5 +1,8 @@
 #include "common.h"
 
+/* main.c - 参数解析与 exploit 流程编排 */
+
+
 void usage(const char *prog) {
   fprintf(stderr,
           "Usage: %s [OPTIONS]\n"
@@ -73,7 +76,6 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  /* 参数校验失败时只打印帮助、不执行 exploit */
   timer_reset();
   pr_info("CVE-2026-43499 Exploit Engine Initiated\n");
   pr_info("Target PID: %d | UID: %d | GID: %d\n", getpid(), getuid(), getgid());

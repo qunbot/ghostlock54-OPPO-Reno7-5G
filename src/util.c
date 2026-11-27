@@ -1,5 +1,8 @@
 #include "common.h"
 
+/* util.c - 计时、日志上下文、read_enforce()、wait_atomic_ms() */
+
+
 void timer_reset(void) { clock_gettime(CLOCK_MONOTONIC, &t_start); }
 double timer_ms(void) {
     struct timespec now;
@@ -19,6 +22,7 @@ int wait_atomic_ms(atomic_int *v, long ms) {
   }
 }
 
+/* 读取 /proc/self/attr/current 并打印 */
 void log_context(const char *tag) {
   char buf[256] = {0};
   int f = open("/proc/self/attr/current", O_RDONLY | O_CLOEXEC);
@@ -29,7 +33,6 @@ void log_context(const char *tag) {
   }
   pr_info("%s: %s\n", tag, buf);
 }
-/* --------------------------------------------------------------- */
 
 
 int read_enforce(void) {

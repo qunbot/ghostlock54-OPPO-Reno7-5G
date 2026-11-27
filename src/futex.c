@@ -1,5 +1,8 @@
 #include "common.h"
 
+/* futex.c - futex PI 原语、X/Y 线程、waiter stamping、write_value() */
+
+
 long raw_futex(volatile int *u1, long op, long val, long val2,
                       volatile int *u2, long val3) {
   register long x0 __asm__("x0") = (long)u1;
@@ -180,8 +183,3 @@ int write_value(uint64_t target, uint64_t value) {
   return trigger_pi() == 0;
 }
 
-/* ---------- KernelSU 集成：模块加载 + Manager 重启 ---------- */
-
-
-
-/* 取路径的 basename 作为 argv[0]（bash/toybox 等多调用程序依赖它） */
