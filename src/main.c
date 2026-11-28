@@ -8,7 +8,7 @@ void usage(const char *prog) {
           "Usage: %s [OPTIONS]\n"
           "\n"
           "Options:\n"
-          "  -m, --module PATH   Release + load target (default: /data/local/tmp/kernelsu.ko)\n"
+          "  -m, --module PATH   Load module from PATH (release only with -f; default: /data/local/tmp/kernelsu.ko)\n"
           "  -h, --help          Show this help\n"
           "\n"
           "Special:\n"
@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
         return 2;
       }
       snprintf(g_module_path, sizeof(g_module_path), "%s", argv[++i]);
+      g_module_given = 1;
     } else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--shell") == 0) {
       g_shell_mode = 1;
       if (i + 1 < argc && argv[i + 1][0] != '\0' && argv[i + 1][0] != '-') {
@@ -80,6 +81,11 @@ int main(int argc, char **argv) {
                "--leak-y-only are mutually exclusive\n");
     usage(argv[0]);
     return 2;
+  }
+  /* -m 只对默认模式有意义（其他模式不加载模块） */
+  if (g_module_given && mode_count > 0) {
+    pr_info("note: -m/--module is ignored with --shell/--permissive-only/"
+            "--leak-only/--leak-y-only\n");
   }
   /* -f 只对默认模式（会释放文件）有意义 */
   if (g_force_release && mode_count > 0) {
@@ -242,8 +248,15 @@ int main(int argc, char **argv) {
       _exit(1);
     }
 
-    /* 提权后释放：内嵌 kernelsu.ko + kernelsu.sh（仅默认模式） */
-    ksu_release_module();
+    /* 提权后释放（仅默认模式）：
+     * - 无 -m：释放内嵌 ko 到默认路径（已存在则跳过，-f 覆盖）
+     * - 有 -m：不释放，直接加载指定路径；加 -f 才强制释放/覆盖到该路径
+     * - kernelsu.sh 始终释放 */
+    if (!g_module_given || g_force_release) {
+        ksu_release_module();
+    } else {
+        pr_info("[KSU] -m given without -f, using existing module at %s\n", g_module_path);
+    }
     ksu_release_script();
 
     pr_success("[CHILD] Running root action. Loading KernelSU via /data/local/tmp/kernelsu.sh\n");

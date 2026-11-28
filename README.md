@@ -18,7 +18,7 @@ GhostLock54 for OPPO Reno7 5G
 与本 exploit 配套的文件统一放在 /data/local/tmp/ 根目录，不要再放子目录：
 
 · /data/local/tmp/ghostlock54 —— 编译产物
-· /data/local/tmp/kernelsu.ko —— KernelSU 模块，**内嵌在 ghostlock54 里，运行时释放（已存在则跳过，-f 覆盖）**；`-m/--module` 可指定释放+加载路径
+· /data/local/tmp/kernelsu.ko —— KernelSU 模块，**内嵌在 ghostlock54 里，运行时释放（已存在则跳过，-f 覆盖）**；`-m/--module` 指定加载路径（不释放，加 `-f` 才释放/覆盖到该路径）
 · /data/local/tmp/kernelsu.sh —— **由 ghostlock54 释放（已存在则跳过，-f 覆盖）**的加载脚本
 
 KernelSU 加载逻辑放在 ghostlock54 **每次启动时释放**的 `/data/local/tmp/kernelsu.sh` 里：
@@ -87,7 +87,7 @@ nm -u ghostlock54 | grep -i selinux    # 应无输出（已不再链接 libselin
 
 运行
 
-ghostlock54 是**单文件**：kernelsu.ko 已内嵌，运行时释放到 /data/local/tmp/kernelsu.ko（存在则跳过，-f 覆盖；-m 可改释放+加载路径）。
+ghostlock54 是**单文件**：kernelsu.ko 已内嵌，运行时释放到 /data/local/tmp/kernelsu.ko（存在则跳过，-f 覆盖）；`-m` 改为只加载指定路径（不释放，加 `-f` 才释放/覆盖到该路径）。
 
 ```sh
 adb push ghostlock54 /data/local/tmp/ghostlock54

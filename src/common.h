@@ -109,6 +109,7 @@ extern atomic_uintptr_t respray_parent, respray_value, respray_lock;
 extern unsigned fake_lock_index;
 extern int y_leak_only;
 extern char g_module_path[256];
+extern int g_module_given;
 extern int g_leak_only;
 extern int g_shell_mode;
 extern int g_force_release;

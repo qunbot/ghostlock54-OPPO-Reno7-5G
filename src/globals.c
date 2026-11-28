@@ -28,6 +28,7 @@ atomic_uintptr_t respray_parent, respray_value, respray_lock;
 unsigned fake_lock_index;
 int y_leak_only;
 char g_module_path[256] = "/data/local/tmp/kernelsu.ko";
+int g_module_given;
 int g_leak_only;
 int g_shell_mode;
 int g_force_release;
