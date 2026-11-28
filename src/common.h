@@ -66,17 +66,12 @@
   } while (0)
 
 /* ---------------- kernel offsets ---------------- */
-#define LINK_TEXT UINT64_C(0xffffffc010080000)
-#define OFF_INIT_TASK UINT64_C(0x2ca2800)
-#define OFF_INIT_CRED UINT64_C(0x2caf850)
-#define OFF_SELINUX_STATE UINT64_C(0x2f07000)
-#define OFF_LOG_BUF UINT64_C(0x2f1e0b4)
-#define OFF_TASK_STATE UINT64_C(0x593324)
-#define OFF_FUTEX_WAIT_REQUEUE_PI UINT64_C(0x358d64)
-#define OFF_SEL_READ_ENFORCE UINT64_C(0x70ccec)
+#include "kernel_offsets.h"
+
 #define ARM64_REG_COUNT 33
 #define ARM64_REG_MASK ((UINT64_C(1) << ARM64_REG_COUNT) - 1)
 
+/* ---------------- futex ops ---------------- */
 #define FUTEX_PRIVATE 128
 #define LOCK_PI_PRIVATE (FUTEX_LOCK_PI | FUTEX_PRIVATE)
 #define UNLOCK_PI_PRIVATE (FUTEX_UNLOCK_PI | FUTEX_PRIVATE)
@@ -141,7 +136,6 @@ long trigger_pi(void);
 int write_value(uint64_t target, uint64_t value);
 const char *path_basename(const char *p);
 void ksu_release_module(void);
-void ksu_release_script(void);
 void usage(const char *prog);
 
 #endif

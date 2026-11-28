@@ -209,6 +209,7 @@ int main(int argc, char **argv) {
     }
 
     if (g_permissive_only) _exit(0);
+    TIMER("child woken");
 
     /* 身份 + SELinux 域：带 [CHILD] 前缀输出（同 CapPrm 风格） */
     pr_success("[CHILD] ");
@@ -232,6 +233,7 @@ int main(int argc, char **argv) {
     }
 
 
+    TIMER("id/caps printed");
     if (__orig_stdout >= 0) {
       dup2(__orig_stdout, STDOUT_FILENO);
       dup2(__orig_stdout, STDERR_FILENO);
@@ -251,30 +253,43 @@ int main(int argc, char **argv) {
     /* 提权后释放（仅默认模式）：
      * - 无 -m：释放内嵌 ko 到默认路径（已存在则跳过，-f 覆盖）
      * - 有 -m：不释放，直接加载指定路径；加 -f 才强制释放/覆盖到该路径
-     * - kernelsu.sh 始终释放 */
+     */
     if (!g_module_given || g_force_release) {
         ksu_release_module();
     } else {
         pr_info("[KSU] -m given without -f, using existing module at %s\n", g_module_path);
     }
-    ksu_release_script();
+    TIMER("module release done");
 
-    pr_success("[CHILD] Running root action. Loading KernelSU via /data/local/tmp/kernelsu.sh\n");
-    fflush(stdout);
-    setenv("PATH", "/sbin:/system/sbin:/system/bin:/system/xbin", 1);
+    /* kln 由 runtime_text + 固定偏移算出，直接 finit_module 加载
+     * （不需要 shell，也不需要读 /proc/kallsyms） */
+    int load_ok = 0;
+    if (access("/sys/module/kernelsu", F_OK) == 0) {
+      pr_success("[KSU] kernelsu already loaded\n");
+      load_ok = 1;
+    } else {
+      TIMER("opening module");
+      int mfd = open(g_module_path, O_RDONLY | O_CLOEXEC);
+      if (mfd < 0) {
+        pr_warning("[KSU] cannot open %s: %s\n", g_module_path, strerror(errno));
+      } else {
+        char mparams[64];
+        snprintf(mparams, sizeof(mparams), "kln=0x%llx level=3",
+                 (unsigned long long)(runtime_text + OFF_KALLSYMS_LOOKUP_NAME));
+        long frc = syscall(__NR_finit_module, mfd, mparams, 0);
+        int ferr = errno;
+        close(mfd);
+        if (frc != 0) {
+          pr_warning("[KSU] finit_module failed: %s\n", strerror(ferr));
+        } else if (access("/sys/module/kernelsu", F_OK) == 0) {
+          load_ok = 1;
+          TIMER("KernelSU loaded (finit_module)");
+        }
+      }
+    }
 
-    pid_t sp = fork();
-    if (sp == 0) {
-      execl("/system/bin/sh", "sh", "/data/local/tmp/kernelsu.sh", g_module_path, (char *)NULL);
-      _exit(127);
-    }
-    int sst = 0;
-    if (sp > 0) {
-      while (waitpid(sp, &sst, 0) < 0 && errno == EINTR) {}
-    }
-    int load_ok = (sp > 0) && WIFEXITED(sst) && WEXITSTATUS(sst) == 0;
     if (!load_ok) {
-      pr_warning("[KSU] module load failed (status=0x%x)\n", sst);
+      pr_warning("[KSU] module load failed\n");
       pr_warning("[KSU] dropping to root shell; run 'exit' then reboot to clean up\n");
       fflush(stdout);
       if (status_pipe[1] >= 0) (void)write(status_pipe[1], "F", 1);

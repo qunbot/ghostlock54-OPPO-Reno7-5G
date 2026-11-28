@@ -19,11 +19,10 @@ GhostLock54 for OPPO Reno7 5G
 
 · /data/local/tmp/ghostlock54 —— 编译产物
 · /data/local/tmp/kernelsu.ko —— KernelSU 模块，**内嵌在 ghostlock54 里，运行时释放（已存在则跳过，-f 覆盖）**；`-m/--module` 指定加载路径（不释放，加 `-f` 才释放/覆盖到该路径）
-· /data/local/tmp/kernelsu.sh —— **由 ghostlock54 释放（已存在则跳过，-f 覆盖）**的加载脚本
 
-KernelSU 加载逻辑放在 ghostlock54 **每次启动时释放**的 `/data/local/tmp/kernelsu.sh` 里：
-默认模式提权成功后直接执行该脚本（解析 kallsyms_lookup_name，优先用 Manager 的 libksud.so 加载、失败回退 insmod），完成后提示手动
-打开 KernelSU Manager；`-s` 模式下可在 root shell 里手动执行同一个脚本。
+KernelSU 加载不再经过 shell 脚本：默认模式提权成功后，子进程直接用
+`finit_module` 系统调用加载模块（`kln` 由 `runtime_text + 0x368354` 算出），
+完成后提示手动打开 KernelSU Manager。
 
 两种使用模式：
 
@@ -32,14 +31,8 @@ KernelSU 加载逻辑放在 ghostlock54 **每次启动时释放**的 `/data/loca
 
 说明：`-s` 模式下终端里会直接出现 `#` 提示符（context `u:r:kernel:s0`，SELinux permissive）；退出 shell 后 root 即消失（无持久 root）。
 
-在该 root shell 里想加载 KernelSU 时，直接运行 ghostlock54 释放的脚本：
-
-```sh
-sh /data/local/tmp/kernelsu.sh            # 默认加载 /data/local/tmp/kernelsu.ko
-sh /data/local/tmp/kernelsu.sh /path/to/kernelsu.ko
-```
-
-脚本每次启动 ghostlock54 时都会写入 /data/local/tmp/kernelsu.sh（存在则跳过，-f 覆盖）。
+`-s` 模式下不加载 KernelSU；需要加载时直接以默认模式运行 ghostlock54 即可，
+程序内部用 `runtime_text + 固定偏移` 算出 kln，不需要查 `/proc/kallsyms`。
 
 防内核崩溃提示
 
@@ -51,11 +44,12 @@ sh /data/local/tmp/kernelsu.sh /path/to/kernelsu.ko
 
 ```
 src/common.h     # 公共声明（宏/常量/全局 extern/函数原型）
+src/kernel_offsets.h  # 内核偏移（固定对应 5.4.254-qgki-gaa96eae94d32）
 src/globals.c    # 全局状态定义
 src/util.c       # 日志、计时、等待辅助
 src/leak.c       # KASLR / task / cred / selinux_state 泄漏
 src/futex.c      # futex PI 原语、X/Y 线程、write_value
-src/ksu.c        # 内嵌 kernelsu.ko / kernelsu.sh 的释放
+src/ksu.c        # 内嵌 kernelsu.ko 的释放
 src/main.c       # 参数解析与 exploit 流程
 ```
 
@@ -112,7 +106,7 @@ adb shell -t /data/local/tmp/ghostlock54 -h
 ```
 
 · `-s/--shell`：程序跑完后，终端会直接变成 # 提示符（uid=0，全 cap，context u:r:shell:s0），可以直接执行 id / getenforce / cat /proc/self/attr/current；**不加载 KernelSU**，exit 后 root 消失。
-· 默认：不弹 #。exploit 拿到内核任意写、把 cred 换成 init_cred、切 permissive，然后执行释放出来的 /data/local/tmp/kernelsu.sh 加载模块（默认 /data/local/tmp/kernelsu.ko），完成后提示手动打开 KernelSU Manager；之后用 Manager 授权 app，在 app 终端里 su 拿 u:r:ksu:s0 的 root shell。
+· 默认：不弹 #。exploit 拿到内核任意写、把 cred 换成 init_cred、切 permissive，然后直接 finit_module 加载模块（默认 /data/local/tmp/kernelsu.ko），完成后提示手动打开 KernelSU Manager；之后用 Manager 授权 app，在 app 终端里 su 拿 u:r:ksu:s0 的 root shell。
 
 程序输出示例（child 阶段）：
 
@@ -237,7 +231,7 @@ KernelSU 集成
 流程：
 
 1. 运行 ghostlock54（可加 -m/--module 指定其它 ko 路径；-s/--shell 只开 root shell 不加载 KSU；-h/--help 查看帮助）
-2. exploit 提权成功后执行 /data/local/tmp/kernelsu.sh（解析 kallsyms_lookup_name，libksud.so 加载、失败回退 insmod），完成后提示手动打开 KernelSU Manager
+2. exploit 提权成功后直接 finit_module 加载模块（kln 由 runtime_text 算出），完成后提示手动打开 KernelSU Manager
 3. 在 Manager 里给需要的 app 授权；之后任意已授权 app 的终端里 su 即可得到 u:r:ksu:s0 的 root shell
 
 模块是 runtime 加载（late-load），不修改 boot.img / 任何分区；重启后重新跑一次 ghostlock54 即可。
