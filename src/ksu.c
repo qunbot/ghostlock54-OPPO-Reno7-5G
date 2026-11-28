@@ -79,7 +79,7 @@ const char ksu_script[] =
   "echo \"[*] kln=0x$KLN\"\n"
   "\n"
   "# 直接用 KernelSU Manager 自带的 libksud.so 加载（glob 自动解析安装哈希路径）\n"
-  "/data/app/*/me.weishu.kernelsu-*/lib/arm64/libksud.so \"$KO\" kln=0x$KLN level=3\n"
+  "/data/app/*/me.weishu.kernelsu-*/lib/arm64/libksud.so insmod \"$KO\" kln=0x$KLN level=3\n"
   "RC=$?\n"
   "if [ ! -d /sys/module/kernelsu ]; then\n"
   "  echo \"[*] libksud did not load (rc=$RC), falling back to insmod\"\n"
